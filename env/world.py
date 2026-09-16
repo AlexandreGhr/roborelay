@@ -98,6 +98,13 @@ class World():
             for x, y in chosen:
                 self.grid.set(x, y, CellType.OBJECT)
 
+        self.current_object_positions = [
+            (x, y)
+            for y in range(self.height)
+            for x in range(self.width)
+            if self.grid.get(x, y) == CellType.OBJECT
+        ]
+
     def increment_turn(self):
         self.turn_count += 1
 
