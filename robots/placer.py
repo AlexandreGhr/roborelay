@@ -32,7 +32,7 @@ class Placer(BaseRobot):
 
         if not self.grid.in_bounds(target_x, target_y):
             raise ValueError("Position hors grille")
-        if self.grid.is_empty(target_x, target_y):
+        if self.grid.get(target_x, target_y) != CellType.OBJECT:
             raise ValueError("Aucun objet à charger sur cette case")
 
         # On retire l'objet de la grille, il "disparaît" dans le stockage
