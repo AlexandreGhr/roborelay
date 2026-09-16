@@ -16,9 +16,10 @@ class RoboRelayEnv(gym.Env):
         self.action_space = spaces.MultiDiscrete([6, 2])
         self.observation_space = spaces.Box(low=0, high=5, shape=(5,), dtype=np.float32)
 
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=None, options=None, randomize=False):
         super().reset(seed=seed)
-        self.world.reset()
+        self.world.reset(randomize=randomize)
+
         self.carrier = self.world.carriers[0]
         self.placer = self.world.placers[0]
 
