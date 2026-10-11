@@ -1,77 +1,51 @@
+"""
+Carrier robot: moves around, picks up an item and drops it next to the Placer.
+It can only act on a neighbour cell (up, down, left or right), never on its own cell.
+"""
+
 from env.cell_types import CellType
-from env.grid import Grid
-from robots.base_robot import BaseRobot
-
-DIRECTIONS = {
-    "up": (0, -1),
-    "down": (0, 1),
-    "left": (-1, 0),
-    "right": (1, 0),
-}
+from robots.base_robot import MobileRobot
 
 
-class Carrier(BaseRobot):
-    def __init__(self, robot_id: str, x: int, y: int, grid: Grid):
-        super().__init__(
-            robot_id=robot_id,
-            x=x,
-            y=y,
-            grid=grid,
-            speed=1,
-            vision_range=1,
-        )
-        # Pas besoin de redéfinir carrying_object ici,
-        # BaseRobot.__init__() le fait déjà (self.carrying_object = False)
+class Carrier(MobileRobot):
+    CELL_TYPE = CellType.CARRIER
 
-    def move(self, direction: str) -> bool:
-        if direction not in DIRECTIONS:
-            raise ValueError(f"Direction inconnue : {direction}")
-
-        dx, dy = DIRECTIONS[direction]
-        new_x, new_y = self.x + dx, self.y + dy
-
-        if not self.grid.in_bounds(new_x, new_y):
-            return False
-        if not self.grid.is_empty(new_x, new_y):
-            return False
-
-        self.grid.set(self.x, self.y, CellType.EMPTY)
-        self.grid.set(new_x, new_y, CellType.CARRIER)
-        self.x, self.y = new_x, new_y
-        return True
+    def __init__(self, robot_id: str, x: int, y: int, grid):
+        super().__init__(robot_id, x, y, grid, vision_range=1)
+        self.carrying_object = False  # only the Carrier can carry an item
 
     def pick_up(self, direction: str) -> bool:
-        if direction not in DIRECTIONS:
-            raise ValueError(f"Direction inconnue : {direction}")
-
-        dx, dy = DIRECTIONS[direction]
-        new_x, new_y = self.x + dx, self.y + dy
-
-        if not self.grid.in_bounds(new_x, new_y):
-            raise ValueError("Position hors grille")
-        if self.grid.is_empty(new_x, new_y):
-            raise ValueError("Aucun objet à ramasser sur cette case")
+        """Take the item from the neighbour cell in this direction."""
         if self.carrying_object:
-            raise ValueError("Robot déjà chargé")
+            raise ValueError("Already carrying an item")
 
+        target_x, target_y = self.adjacent(direction)
+        if not self.grid.in_bounds(target_x, target_y):
+            raise ValueError("Position is outside the grid")
+        # Check for an ITEM, not just "not empty": otherwise the Carrier
+        # could pick up another robot.
+        if self.grid.get(target_x, target_y) != CellType.OBJECT:
+            raise ValueError("No item to pick up in this cell")
+
+        self.grid.set(target_x, target_y, CellType.EMPTY)
         self.carrying_object = True
-        self.grid.set(new_x, new_y, CellType.EMPTY)
         return True
 
     def drop(self, direction: str) -> bool:
+        """Put the carried item on the empty neighbour cell in this direction."""
         if not self.carrying_object:
-            raise ValueError("Aucun objet à déposer")
-        if direction not in DIRECTIONS:
-            raise ValueError(f"Direction inconnue : {direction}")
+            raise ValueError("No item to drop")
 
-        dx, dy = DIRECTIONS[direction]
-        new_x, new_y = self.x + dx, self.y + dy
+        target_x, target_y = self.adjacent(direction)
+        if not self.grid.in_bounds(target_x, target_y):
+            raise ValueError("Position is outside the grid")
+        if not self.grid.is_empty(target_x, target_y):
+            raise ValueError("Cell is not empty, cannot drop here")
 
-        if not self.grid.in_bounds(new_x, new_y):
-            raise ValueError("Position hors grille")
-        if not self.grid.is_empty(new_x, new_y):
-            raise ValueError("Case déjà occupée, impossible de déposer ici")
-
-        self.grid.set(new_x, new_y, CellType.OBJECT)
+        self.grid.set(target_x, target_y, CellType.OBJECT)
         self.carrying_object = False
         return True
+
+    def __repr__(self) -> str:
+        return (f"Carrier(id={self.robot_id}, pos=({self.x},{self.y}), "
+                f"carrying={self.carrying_object})")

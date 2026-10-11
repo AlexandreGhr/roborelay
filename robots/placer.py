@@ -1,43 +1,34 @@
-from env.cell_types import CellType
-from env.grid import Grid
-from robots.base_robot import BaseRobot
+"""
+Placer robot: fixed, it never moves (it has no move() method).
+It takes an item dropped on a neighbour cell and stores it.
+The number of stored items is the score of the game.
+"""
 
-DIRECTIONS = {
-    "up": (0, -1),
-    "down": (0, 1),
-    "left": (-1, 0),
-    "right": (1, 0),
-}
+from env.cell_types import CellType
+from robots.base_robot import BaseRobot
 
 
 class Placer(BaseRobot):
-    def __init__(self, robot_id: str, x: int, y: int, grid: Grid):
-        super().__init__(
-            robot_id=robot_id,
-            x=x,
-            y=y,
-            grid=grid,
-            speed=0,          # ne bouge jamais
-            vision_range=1,    # voit seulement ses cases adjacentes
-        )
-        self.storage: list[str] = []  # liste des objets stockés
+    CELL_TYPE = CellType.PLACER
+
+    def __init__(self, robot_id: str, x: int, y: int, grid):
+        super().__init__(robot_id, x, y, grid, vision_range=1)
+        # A list (not just a counter) so items can carry more info later (type, weight...)
+        self.storage: list[str] = []
 
     def charge(self, direction: str) -> bool:
-
-        if direction not in DIRECTIONS:
-            raise ValueError(f"Direction inconnue : {direction}")
-
-        dx, dy = DIRECTIONS[direction]
-        target_x, target_y = self.x + dx, self.y + dy
+        """Take the item from the neighbour cell in this direction and store it."""
+        target_x, target_y = self.adjacent(direction)
 
         if not self.grid.in_bounds(target_x, target_y):
-            raise ValueError("Position hors grille")
+            raise ValueError("Position is outside the grid")
+        # Check for an ITEM, not just "not empty": otherwise the Placer
+        # could store another robot.
         if self.grid.get(target_x, target_y) != CellType.OBJECT:
-            raise ValueError("Aucun objet à charger sur cette case")
+            raise ValueError("No item to charge in this cell")
 
-        # On retire l'objet de la grille, il "disparaît" dans le stockage
-        self.grid.set(target_x, target_y, CellType.EMPTY)
-        self.storage.append("object")  # pour l'instant, un objet générique
+        self.grid.set(target_x, target_y, CellType.EMPTY)  # the item leaves the grid...
+        self.storage.append("item")                         # ...and goes into the storage
         return True
 
     @property
@@ -45,7 +36,5 @@ class Placer(BaseRobot):
         return len(self.storage)
 
     def __repr__(self) -> str:
-        return (
-            f"Placer(id={self.robot_id}, pos=({self.x},{self.y}), "
-            f"stored={self.stored_count})"
-        )
+        return (f"Placer(id={self.robot_id}, pos=({self.x},{self.y}), "
+                f"stored={self.stored_count})")
